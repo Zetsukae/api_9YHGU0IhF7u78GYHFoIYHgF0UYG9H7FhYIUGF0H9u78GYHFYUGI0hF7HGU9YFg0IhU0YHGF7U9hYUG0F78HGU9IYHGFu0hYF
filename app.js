@@ -199,7 +199,6 @@ let historyIndex = -1
 const welcomeScreen = document.getElementById("welcome-screen")
 const appContainer = document.getElementById("app-container")
 const serviceFrame = document.getElementById("service-frame")
-const homeBtn = document.getElementById("streamix-home-btn")
 const f1Menu = document.getElementById("f1-menu")
 const settingsModal = document.getElementById("settings-modal")
 const loadingOverlay = document.getElementById("loading")
@@ -211,6 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners()
 })
 
+// Function to load settings from localStorage
 function loadSettings() {
   const savedLang = localStorage.getItem("streamix-language") || "fr"
   const savedTheme = localStorage.getItem("streamix-theme") || "dark"
@@ -224,6 +224,7 @@ function loadSettings() {
   applyLanguage(savedLang)
 }
 
+// Function to check and select the default service from localStorage
 function checkDefaultService() {
   const defaultService = localStorage.getItem("streamix-default-service")
   if (defaultService && services[defaultService]) {
@@ -231,10 +232,11 @@ function checkDefaultService() {
   }
 }
 
+// Function to set up event listeners
 function setupEventListeners() {
   // Click outside menu to close
   document.addEventListener("click", (e) => {
-    if (menuOpen && !f1Menu.contains(e.target) && e.target !== homeBtn) {
+    if (menuOpen && !f1Menu.contains(e.target)) {
       closeMenu()
     }
   })
@@ -257,7 +259,7 @@ function setupEventListeners() {
   })
 }
 
-// Service Selection
+// Function to select a service and load its URL
 function selectService(serviceKey) {
   const service = services[serviceKey]
   if (!service) return
@@ -268,6 +270,7 @@ function selectService(serviceKey) {
   showApp(service.url)
 }
 
+// Function to navigate to a custom URL
 function goToCustomUrl() {
   const input = document.getElementById("custom-url")
   let url = input.value.trim()
@@ -285,6 +288,7 @@ function goToCustomUrl() {
   showApp(url)
 }
 
+// Function to toggle visibility of the custom URL input
 function toggleCustomUrl() {
   const container = document.getElementById("custom-url-container")
   const toggleBtn = document.querySelector(".toggle-custom")
@@ -293,6 +297,7 @@ function toggleCustomUrl() {
   toggleBtn.classList.toggle("active")
 }
 
+// Function to display the app and load the given URL
 function showApp(url) {
   welcomeScreen.classList.add("hidden")
   appContainer.classList.remove("hidden")
@@ -339,10 +344,12 @@ function showApp(url) {
   }, 3000)
 }
 
+// Function to open a URL in a new tab
 function openInNewTab(url) {
   window.open(url || currentUrl, "_blank")
 }
 
+// Function to display the welcome screen
 function showWelcome() {
   appContainer.classList.add("hidden")
   welcomeScreen.classList.remove("hidden")
@@ -352,7 +359,7 @@ function showWelcome() {
   currentUrl = null
 }
 
-// Menu Functions
+// Function to toggle the menu visibility
 function toggleMenu() {
   if (menuOpen) {
     closeMenu()
@@ -361,17 +368,19 @@ function toggleMenu() {
   }
 }
 
+// Function to open the menu
 function openMenu() {
   f1Menu.classList.remove("hidden")
   menuOpen = true
 }
 
+// Function to close the menu
 function closeMenu() {
   f1Menu.classList.add("hidden")
   menuOpen = false
 }
 
-// Navigation Functions
+// Function to navigate to the home page of the current service
 function goHome() {
   if (currentService && services[currentService]) {
     serviceFrame.src = services[currentService].url
@@ -380,12 +389,14 @@ function goHome() {
   closeMenu()
 }
 
+// Function to refresh the current page
 function refresh() {
   loadingOverlay.classList.remove("hidden")
   serviceFrame.src = serviceFrame.src
   closeMenu()
 }
 
+// Function to navigate back in history
 function goBack() {
   if (historyIndex > 0) {
     historyIndex--
@@ -395,6 +406,7 @@ function goBack() {
   closeMenu()
 }
 
+// Function to navigate forward in history
 function goForward() {
   if (historyIndex < history.length - 1) {
     historyIndex++
@@ -404,32 +416,37 @@ function goForward() {
   closeMenu()
 }
 
-// Settings Functions
+// Function to open the settings modal
 function openSettings() {
   settingsModal.classList.remove("hidden")
   closeMenu()
 }
 
+// Function to close the settings modal
 function closeSettings() {
   settingsModal.classList.add("hidden")
 }
 
+// Function to change the language setting
 function changeLanguage() {
   const lang = document.getElementById("language-select").value
   localStorage.setItem("streamix-language", lang)
   applyLanguage(lang)
 }
 
+// Function to change the theme setting
 function changeTheme() {
   const theme = document.getElementById("theme-select").value
   localStorage.setItem("streamix-theme", theme)
   applyTheme(theme)
 }
 
+// Function to apply the selected theme
 function applyTheme(theme) {
   document.body.setAttribute("data-theme", theme)
 }
 
+// Function to apply the selected language
 function applyLanguage(lang) {
   const t = locales[lang] || locales.fr
 
@@ -462,6 +479,7 @@ function applyLanguage(lang) {
   document.querySelector(".loading-overlay p").textContent = t.loading
 }
 
+// Function to reset all settings
 function resetSettings() {
   if (confirm("Voulez-vous vraiment réinitialiser tous les paramètres ?")) {
     localStorage.removeItem("streamix-language")
@@ -471,7 +489,7 @@ function resetSettings() {
   }
 }
 
-// Save default service when changed
+// Event listener to save default service when changed
 document.getElementById("default-service")?.addEventListener("change", (e) => {
   localStorage.setItem("streamix-default-service", e.target.value)
 })
@@ -490,4 +508,4 @@ window.closeSettings = closeSettings
 window.changeLanguage = changeLanguage
 window.changeTheme = changeTheme
 window.resetSettings = resetSettings
-window.openInNewTab = openInNewTab
+window.openInNewTab = openInNewTa
