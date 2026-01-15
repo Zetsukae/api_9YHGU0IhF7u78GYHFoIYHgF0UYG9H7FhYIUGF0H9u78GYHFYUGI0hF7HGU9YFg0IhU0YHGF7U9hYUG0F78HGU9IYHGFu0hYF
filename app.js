@@ -1,5 +1,152 @@
 // Streamix Web App
 
+// ============================================
+// LOCALSTORAGE BRIDGE - Communication externe
+// ============================================
+
+const StorageBridge = {
+  // Prefixe pour identifier les donnees Streamix
+  PREFIX: "streamix-",
+
+  // Recuperer toutes les donnees Streamix
+  getAll: function () {
+    const data = {}
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key.startsWith(this.PREFIX)) {
+        try {
+          data[key] = JSON.parse(localStorage.getItem(key))
+        } catch {
+          data[key] = localStorage.getItem(key)
+        }
+      }
+    }
+    return data
+  },
+
+  // Recuperer une valeur specifique
+  get: function (key) {
+    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
+    try {
+      return JSON.parse(localStorage.getItem(fullKey))
+    } catch {
+      return localStorage.getItem(fullKey)
+    }
+  },
+
+  // Definir une valeur
+  set: function (key, value) {
+    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
+    const stringValue = typeof value === "object" ? JSON.stringify(value) : value
+    localStorage.setItem(fullKey, stringValue)
+    this.notifyChange("set", fullKey, value)
+  },
+
+  // Supprimer une valeur
+  remove: function (key) {
+    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
+    localStorage.removeItem(fullKey)
+    this.notifyChange("remove", fullKey, null)
+  },
+
+  // Reset complet des donnees Streamix
+  reset: function () {
+    const keysToRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key.startsWith(this.PREFIX)) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
+    this.notifyChange("reset", null, null)
+  },
+
+  // Notifier les changements via CustomEvent
+  notifyChange: function (action, key, value) {
+    const event = new CustomEvent("streamix-storage-change", {
+      detail: {
+        action: action,
+        key: key,
+        value: value,
+        timestamp: Date.now(),
+        allData: this.getAll(),
+      },
+    })
+    window.dispatchEvent(event)
+
+    // Aussi envoyer via postMessage pour les iframes/applications externes
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "streamix-storage-change",
+          action: action,
+          key: key,
+          value: value,
+          timestamp: Date.now(),
+          allData: this.getAll(),
+        },
+        "*",
+      )
+    }
+  },
+}
+
+// Ecouter les messages entrants (depuis une app externe)
+window.addEventListener("message", (event) => {
+  // Verifier que le message est pour Streamix
+  if (!event.data || event.data.type !== "streamix-storage-command") return
+
+  const { action, key, value, requestId } = event.data
+  let result = null
+  let error = null
+
+  try {
+    switch (action) {
+      case "getAll":
+        result = StorageBridge.getAll()
+        break
+      case "get":
+        result = StorageBridge.get(key)
+        break
+      case "set":
+        StorageBridge.set(key, value)
+        result = true
+        break
+      case "remove":
+        StorageBridge.remove(key)
+        result = true
+        break
+      case "reset":
+        StorageBridge.reset()
+        result = true
+        break
+      default:
+        error = "Action inconnue: " + action
+    }
+  } catch (e) {
+    error = e.message
+  }
+
+  // Repondre a l'application externe
+  event.source.postMessage(
+    {
+      type: "streamix-storage-response",
+      requestId: requestId,
+      result: result,
+      error: error,
+    },
+    event.origin === "null" ? "*" : event.origin,
+  )
+})
+
+// Exposer le bridge globalement
+window.StreamixStorage = StorageBridge
+
+// ============================================
+// APPLICATION PRINCIPALE
+// ============================================
+
 // Services configuration
 const services = {
   franime: {
@@ -208,13 +355,20 @@ document.addEventListener("DOMContentLoaded", () => {
   loadSettings()
   checkDefaultService()
   setupEventListeners()
+
+  // Notifier que le bridge est pret
+  window.dispatchEvent(
+    new CustomEvent("streamix-ready", {
+      detail: { storage: StorageBridge.getAll() },
+    }),
+  )
 })
 
-// Function to load settings from localStorage
+// Function to load settings from localStorage (utilise le bridge)
 function loadSettings() {
-  const savedLang = localStorage.getItem("streamix-language") || "fr"
-  const savedTheme = localStorage.getItem("streamix-theme") || "dark"
-  const savedService = localStorage.getItem("streamix-default-service") || ""
+  const savedLang = StorageBridge.get("language") || "fr"
+  const savedTheme = StorageBridge.get("theme") || "dark"
+  const savedService = StorageBridge.get("default-service") || ""
 
   document.getElementById("language-select").value = savedLang
   document.getElementById("theme-select").value = savedTheme
@@ -226,7 +380,7 @@ function loadSettings() {
 
 // Function to check and select the default service from localStorage
 function checkDefaultService() {
-  const defaultService = localStorage.getItem("streamix-default-service")
+  const defaultService = StorageBridge.get("default-service")
   if (defaultService && services[defaultService]) {
     selectService(defaultService)
   }
@@ -302,10 +456,6 @@ function showApp(url) {
   welcomeScreen.classList.add("hidden")
   appContainer.classList.remove("hidden")
   loadingOverlay.classList.remove("hidden")
-
-  // Note: Due to X-Frame-Options restrictions, most streaming sites
-  // cannot be embedded in iframes. We'll open in a new tab instead.
-  // For GitHub Pages deployment, we provide a redirect option.
 
   serviceFrame.src = url
 
@@ -427,17 +577,17 @@ function closeSettings() {
   settingsModal.classList.add("hidden")
 }
 
-// Function to change the language setting
+// Function to change the language setting (utilise le bridge)
 function changeLanguage() {
   const lang = document.getElementById("language-select").value
-  localStorage.setItem("streamix-language", lang)
+  StorageBridge.set("language", lang)
   applyLanguage(lang)
 }
 
-// Function to change the theme setting
+// Function to change the theme setting (utilise le bridge)
 function changeTheme() {
   const theme = document.getElementById("theme-select").value
-  localStorage.setItem("streamix-theme", theme)
+  StorageBridge.set("theme", theme)
   applyTheme(theme)
 }
 
@@ -453,8 +603,6 @@ function applyLanguage(lang) {
   // Update UI text
   document.querySelector(".container h1").textContent = t.welcome
   document.querySelector(".container > p").textContent = t.chooseService
-  document.querySelector(".toggle-custom").innerHTML = `<span id="toggle-icon">▶</span> ${t.customUrl}`
-  document.querySelector(".custom-go").textContent = t.go
 
   // Update menu items
   const menuItems = document.querySelectorAll(".menu-item")
@@ -462,7 +610,7 @@ function applyLanguage(lang) {
   const menuIcons = ["🏠", "🔄", "⬅️", "➡️", "⚙️", "🔙"]
 
   let textIndex = 0
-  menuItems.forEach((item, index) => {
+  menuItems.forEach((item) => {
     if (!item.classList.contains("menu-separator")) {
       item.innerHTML = `<span>${menuIcons[textIndex]}</span> ${menuTexts[textIndex]}`
       textIndex++
@@ -476,22 +624,21 @@ function applyLanguage(lang) {
   document.querySelector(".settings-footer .disclaimer").textContent = t.disclaimer
 
   // Update loading text
-  document.querySelector(".loading-overlay p").textContent = t.loading
+  const loadingText = document.querySelector(".loading-overlay p")
+  if (loadingText) loadingText.textContent = t.loading
 }
 
-// Function to reset all settings
+// Function to reset all settings (utilise le bridge)
 function resetSettings() {
   if (confirm("Voulez-vous vraiment réinitialiser tous les paramètres ?")) {
-    localStorage.removeItem("streamix-language")
-    localStorage.removeItem("streamix-theme")
-    localStorage.removeItem("streamix-default-service")
+    StorageBridge.reset()
     location.reload()
   }
 }
 
-// Event listener to save default service when changed
+// Event listener to save default service when changed (utilise le bridge)
 document.getElementById("default-service")?.addEventListener("change", (e) => {
-  localStorage.setItem("streamix-default-service", e.target.value)
+  StorageBridge.set("default-service", e.target.value)
 })
 
 // Expose functions globally for onclick handlers
@@ -508,4 +655,4 @@ window.closeSettings = closeSettings
 window.changeLanguage = changeLanguage
 window.changeTheme = changeTheme
 window.resetSettings = resetSettings
-window.openInNewTab = openInNewTa
+window.openInNewTab = openInNewTab
