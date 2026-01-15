@@ -36,6 +36,92 @@
     </div>
   </div>
 
+  <!-- Main App (iframe container) -->
+  <div id="app-container" class="app-container hidden">
+    <!-- F1 Menu -->
+    <div id="f1-menu" class="f1-menu hidden">
+      <div class="menu-item" onclick="goHome()">
+        <span>🏠</span> Accueil du service
+      </div>
+      <div class="menu-item" onclick="refresh()">
+        <span>🔄</span> Actualiser
+      </div>
+      <div class="menu-item" onclick="goBack()">
+        <span>⬅️</span> Précédent
+      </div>
+      <div class="menu-item" onclick="goForward()">
+        <span>➡️</span> Suivant
+      </div>
+      <div class="menu-separator"></div>
+      <div class="menu-item" onclick="openSettings()">
+        <span>⚙️</span> Paramètres
+      </div>
+      <div class="menu-separator"></div>
+      <div class="menu-item" onclick="showWelcome()">
+        <span>🔙</span> Changer de service
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="settings-modal hidden">
+      <div class="settings-content">
+        <div class="settings-header">
+          <h2>⚙️ Paramètres Streamix</h2>
+          <button class="close-settings" onclick="closeSettings()">×</button>
+        </div>
+        <div class="settings-body">
+          <div class="setting-group">
+            <label>🌐 Langue</label>
+            <select id="language-select" onchange="changeLanguage()">
+              <option value="fr">Français</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+              <option value="ja">日本語</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label>🎨 Thème</label>
+            <select id="theme-select" onchange="changeTheme()">
+              <option value="dark">Sombre</option>
+              <option value="light">Clair</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label>📍 Service par défaut</label>
+            <select id="default-service">
+              <option value="">Toujours demander</option>
+              <option value="franime">Franime</option>
+              <option value="animesama">Anime Sama</option>
+              <option value="voiranime">Voiranime</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <button class="reset-btn" onclick="resetSettings()">
+              🔄 Réinitialiser les paramètres
+            </button>
+          </div>
+        </div>
+        <div class="settings-footer">
+          <p class="version">Streamix Web v1.0.0</p>
+          <p class="credits">Fait avec ❤ par Uniware Team</p>
+          <p class="disclaimer">Nous ne possédons pas les droits des contenus affichés.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Service Frame Container -->
+    <div id="frame-container" class="frame-container">
+      <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <p>Chargement...</p>
+      </div>
+      <iframe id="service-frame" src="/placeholder.svg" frameborder="0" allowfullscreen></iframe>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
