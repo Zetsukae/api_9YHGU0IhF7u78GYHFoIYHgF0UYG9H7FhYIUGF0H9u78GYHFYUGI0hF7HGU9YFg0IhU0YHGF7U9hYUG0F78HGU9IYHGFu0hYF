@@ -1,658 +1,79 @@
-// Streamix Web App
-
 // ============================================
-// LOCALSTORAGE BRIDGE - Communication externe
+// LOCALSTORAGE BRIDGE (Pour garder la mémoire)
 // ============================================
-
 const StorageBridge = {
-  // Prefixe pour identifier les donnees Streamix
   PREFIX: "streamix-",
-
-  // Recuperer toutes les donnees Streamix
-  getAll: function () {
-    const data = {}
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key.startsWith(this.PREFIX)) {
-        try {
-          data[key] = JSON.parse(localStorage.getItem(key))
-        } catch {
-          data[key] = localStorage.getItem(key)
-        }
-      }
-    }
-    return data
+  get: function(key) {
+    try { return JSON.parse(localStorage.getItem(this.PREFIX + key)); } 
+    catch { return localStorage.getItem(this.PREFIX + key); }
   },
-
-  // Recuperer une valeur specifique
-  get: function (key) {
-    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
-    try {
-      return JSON.parse(localStorage.getItem(fullKey))
-    } catch {
-      return localStorage.getItem(fullKey)
-    }
-  },
-
-  // Definir une valeur
-  set: function (key, value) {
-    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
-    const stringValue = typeof value === "object" ? JSON.stringify(value) : value
-    localStorage.setItem(fullKey, stringValue)
-    this.notifyChange("set", fullKey, value)
-  },
-
-  // Supprimer une valeur
-  remove: function (key) {
-    const fullKey = key.startsWith(this.PREFIX) ? key : this.PREFIX + key
-    localStorage.removeItem(fullKey)
-    this.notifyChange("remove", fullKey, null)
-  },
-
-  // Reset complet des donnees Streamix
-  reset: function () {
-    const keysToRemove = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key.startsWith(this.PREFIX)) {
-        keysToRemove.push(key)
-      }
-    }
-    keysToRemove.forEach((key) => localStorage.removeItem(key))
-    this.notifyChange("reset", null, null)
-  },
-
-  // Notifier les changements via CustomEvent
-  notifyChange: function (action, key, value) {
-    const event = new CustomEvent("streamix-storage-change", {
-      detail: {
-        action: action,
-        key: key,
-        value: value,
-        timestamp: Date.now(),
-        allData: this.getAll(),
-      },
-    })
-    window.dispatchEvent(event)
-
-    // Aussi envoyer via postMessage pour les iframes/applications externes
-    if (window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: "streamix-storage-change",
-          action: action,
-          key: key,
-          value: value,
-          timestamp: Date.now(),
-          allData: this.getAll(),
-        },
-        "*",
-      )
-    }
-  },
-}
-
-// Ecouter les messages entrants (depuis une app externe)
-window.addEventListener("message", (event) => {
-  // Verifier que le message est pour Streamix
-  if (!event.data || event.data.type !== "streamix-storage-command") return
-
-  const { action, key, value, requestId } = event.data
-  let result = null
-  let error = null
-
-  try {
-    switch (action) {
-      case "getAll":
-        result = StorageBridge.getAll()
-        break
-      case "get":
-        result = StorageBridge.get(key)
-        break
-      case "set":
-        StorageBridge.set(key, value)
-        result = true
-        break
-      case "remove":
-        StorageBridge.remove(key)
-        result = true
-        break
-      case "reset":
-        StorageBridge.reset()
-        result = true
-        break
-      default:
-        error = "Action inconnue: " + action
-    }
-  } catch (e) {
-    error = e.message
+  set: function(key, value) {
+    const stringValue = typeof value === "object" ? JSON.stringify(value) : value;
+    localStorage.setItem(this.PREFIX + key, stringValue);
   }
-
-  // Repondre a l'application externe
-  event.source.postMessage(
-    {
-      type: "streamix-storage-response",
-      requestId: requestId,
-      result: result,
-      error: error,
-    },
-    event.origin === "null" ? "*" : event.origin,
-  )
-})
-
-// Exposer le bridge globalement
-window.StreamixStorage = StorageBridge
+};
 
 // ============================================
-// APPLICATION PRINCIPALE
+// LOGIQUE PRINCIPALE
 // ============================================
 
-// Services configuration
+// URLs des services
 const services = {
-  franime: {
-    name: "Franime",
-    url: "https://franime.fr/",
-  },
-  animesama: {
-    name: "Anime Sama",
-    url: "https://anime-sama.pw/",
-  },
-  voiranime: {
-    name: "Voiranime",
-    url: "https://v6.voiranime.com/",
-  },
-}
+  franime: "https://franime.fr/",
+  animesama: "https://anime-sama.pw/",
+  voiranime: "https://v6.voiranime.com/"
+};
 
-// Translations
-const locales = {
-  fr: {
-    welcome: "Bienvenue sur Streamix",
-    chooseService: "Choisissez votre service de streaming préféré",
-    customUrl: "URL personnalisée",
-    go: "Aller",
-    home: "Accueil du service",
-    refresh: "Actualiser",
-    previous: "Précédent",
-    next: "Suivant",
-    settings: "Paramètres",
-    changeService: "Changer de service",
-    settingsTitle: "Paramètres Streamix",
-    language: "Langue",
-    theme: "Thème",
-    defaultService: "Service par défaut",
-    alwaysAsk: "Toujours demander",
-    reset: "Réinitialiser les paramètres",
-    dark: "Sombre",
-    light: "Clair",
-    loading: "Chargement...",
-    version: "Streamix Web v1.0.0",
-    credits: "Fait avec ❤ par Uniware Team",
-    disclaimer: "Nous ne possédons pas les droits des contenus affichés.",
-  },
-  en: {
-    welcome: "Welcome to Streamix",
-    chooseService: "Choose your favorite streaming service",
-    customUrl: "Custom URL",
-    go: "Go",
-    home: "Service Home",
-    refresh: "Refresh",
-    previous: "Previous",
-    next: "Next",
-    settings: "Settings",
-    changeService: "Change service",
-    settingsTitle: "Streamix Settings",
-    language: "Language",
-    theme: "Theme",
-    defaultService: "Default service",
-    alwaysAsk: "Always ask",
-    reset: "Reset settings",
-    dark: "Dark",
-    light: "Light",
-    loading: "Loading...",
-    version: "Streamix Web v1.0.0",
-    credits: "Made with ❤ by Uniware Team",
-    disclaimer: "We do not own the rights to the displayed content.",
-  },
-  es: {
-    welcome: "Bienvenido a Streamix",
-    chooseService: "Elige tu servicio de streaming favorito",
-    customUrl: "URL personalizada",
-    go: "Ir",
-    home: "Inicio del servicio",
-    refresh: "Actualizar",
-    previous: "Anterior",
-    next: "Siguiente",
-    settings: "Configuración",
-    changeService: "Cambiar servicio",
-    settingsTitle: "Configuración de Streamix",
-    language: "Idioma",
-    theme: "Tema",
-    defaultService: "Servicio predeterminado",
-    alwaysAsk: "Siempre preguntar",
-    reset: "Restablecer configuración",
-    dark: "Oscuro",
-    light: "Claro",
-    loading: "Cargando...",
-    version: "Streamix Web v1.0.0",
-    credits: "Hecho con ❤ por Uniware Team",
-    disclaimer: "No poseemos los derechos del contenido mostrado.",
-  },
-  de: {
-    welcome: "Willkommen bei Streamix",
-    chooseService: "Wählen Sie Ihren bevorzugten Streaming-Dienst",
-    customUrl: "Benutzerdefinierte URL",
-    go: "Los",
-    home: "Dienst-Startseite",
-    refresh: "Aktualisieren",
-    previous: "Zurück",
-    next: "Weiter",
-    settings: "Einstellungen",
-    changeService: "Dienst wechseln",
-    settingsTitle: "Streamix Einstellungen",
-    language: "Sprache",
-    theme: "Design",
-    defaultService: "Standarddienst",
-    alwaysAsk: "Immer fragen",
-    reset: "Einstellungen zurücksetzen",
-    dark: "Dunkel",
-    light: "Hell",
-    loading: "Wird geladen...",
-    version: "Streamix Web v1.0.0",
-    credits: "Mit ❤ gemacht von Uniware Team",
-    disclaimer: "Wir besitzen nicht die Rechte an den angezeigten Inhalten.",
-  },
-  it: {
-    welcome: "Benvenuto su Streamix",
-    chooseService: "Scegli il tuo servizio di streaming preferito",
-    customUrl: "URL personalizzato",
-    go: "Vai",
-    home: "Home del servizio",
-    refresh: "Aggiorna",
-    previous: "Precedente",
-    next: "Successivo",
-    settings: "Impostazioni",
-    changeService: "Cambia servizio",
-    settingsTitle: "Impostazioni Streamix",
-    language: "Lingua",
-    theme: "Tema",
-    defaultService: "Servizio predefinito",
-    alwaysAsk: "Chiedi sempre",
-    reset: "Ripristina impostazioni",
-    dark: "Scuro",
-    light: "Chiaro",
-    loading: "Caricamento...",
-    version: "Streamix Web v1.0.0",
-    credits: "Fatto con ❤ da Uniware Team",
-    disclaimer: "Non possediamo i diritti dei contenuti visualizzati.",
-  },
-  pt: {
-    welcome: "Bem-vindo ao Streamix",
-    chooseService: "Escolha seu serviço de streaming favorito",
-    customUrl: "URL personalizada",
-    go: "Ir",
-    home: "Início do serviço",
-    refresh: "Atualizar",
-    previous: "Anterior",
-    next: "Próximo",
-    settings: "Configurações",
-    changeService: "Mudar serviço",
-    settingsTitle: "Configurações do Streamix",
-    language: "Idioma",
-    theme: "Tema",
-    defaultService: "Serviço padrão",
-    alwaysAsk: "Sempre perguntar",
-    reset: "Redefinir configurações",
-    dark: "Escuro",
-    light: "Claro",
-    loading: "Carregando...",
-    version: "Streamix Web v1.0.0",
-    credits: "Feito com ❤ pela Uniware Team",
-    disclaimer: "Não possuímos os direitos do conteúdo exibido.",
-  },
-  ja: {
-    welcome: "Streamixへようこそ",
-    chooseService: "お気に入りのストリーミングサービスを選択",
-    customUrl: "カスタムURL",
-    go: "移動",
-    home: "サービスホーム",
-    refresh: "更新",
-    previous: "前へ",
-    next: "次へ",
-    settings: "設定",
-    changeService: "サービス変更",
-    settingsTitle: "Streamix設定",
-    language: "言語",
-    theme: "テーマ",
-    defaultService: "デフォルトサービス",
-    alwaysAsk: "常に確認",
-    reset: "設定をリセット",
-    dark: "ダーク",
-    light: "ライト",
-    loading: "読み込み中...",
-    version: "Streamix Web v1.0.0",
-    credits: "Uniware Teamが❤を込めて作成",
-    disclaimer: "表示されるコンテンツの権利は所有していません。",
-  },
-}
+// Éléments du DOM
+const welcomeScreen = document.getElementById("welcome-screen");
+const appContainer = document.getElementById("app-container");
+const serviceFrame = document.getElementById("service-frame");
+const loadingOverlay = document.getElementById("loading");
 
-// State
-let currentService = null
-let currentUrl = null
-let menuOpen = false
-const history = []
-let historyIndex = -1
-
-// DOM Elements
-const welcomeScreen = document.getElementById("welcome-screen")
-const appContainer = document.getElementById("app-container")
-const serviceFrame = document.getElementById("service-frame")
-const f1Menu = document.getElementById("f1-menu")
-const settingsModal = document.getElementById("settings-modal")
-const loadingOverlay = document.getElementById("loading")
-
-// Initialize
+// Initialisation
 document.addEventListener("DOMContentLoaded", () => {
-  loadSettings()
-  checkDefaultService()
-  setupEventListeners()
-
-  // Notifier que le bridge est pret
-  window.dispatchEvent(
-    new CustomEvent("streamix-ready", {
-      detail: { storage: StorageBridge.getAll() },
-    }),
-  )
-})
-
-// Function to load settings from localStorage (utilise le bridge)
-function loadSettings() {
-  const savedLang = StorageBridge.get("language") || "fr"
-  const savedTheme = StorageBridge.get("theme") || "dark"
-  const savedService = StorageBridge.get("default-service") || ""
-
-  document.getElementById("language-select").value = savedLang
-  document.getElementById("theme-select").value = savedTheme
-  document.getElementById("default-service").value = savedService
-
-  applyTheme(savedTheme)
-  applyLanguage(savedLang)
-}
-
-// Function to check and select the default service from localStorage
-function checkDefaultService() {
-  const defaultService = StorageBridge.get("default-service")
-  if (defaultService && services[defaultService]) {
-    selectService(defaultService)
+  // Vérifier si un service était déjà ouvert lors de la dernière session
+  const lastService = StorageBridge.get("last-service");
+  if (lastService && services[lastService]) {
+    selectService(lastService);
   }
-}
 
-// Function to set up event listeners
-function setupEventListeners() {
-  // Click outside menu to close
-  document.addEventListener("click", (e) => {
-    if (menuOpen && !f1Menu.contains(e.target)) {
-      closeMenu()
-    }
-  })
-
-  // Keyboard shortcuts
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "F1") {
-      e.preventDefault()
-      toggleMenu()
-    }
-    if (e.key === "Escape") {
-      closeMenu()
-      closeSettings()
-    }
-  })
-
-  // Frame load event
+  // Masquer le chargement quand l'iframe est prête
   serviceFrame.addEventListener("load", () => {
-    loadingOverlay.classList.add("hidden")
-  })
-}
+    loadingOverlay.classList.add("hidden");
+  });
+});
 
-// Function to select a service and load its URL
+// Sélectionner un service
 function selectService(serviceKey) {
-  const service = services[serviceKey]
-  if (!service) return
+  const url = services[serviceKey];
+  if (!url) return;
 
-  currentService = serviceKey
-  currentUrl = service.url
+  // Sauvegarder le choix
+  StorageBridge.set("last-service", serviceKey);
 
-  showApp(service.url)
+  // Afficher l'interface
+  welcomeScreen.classList.add("hidden");
+  appContainer.classList.remove("hidden");
+  loadingOverlay.classList.remove("hidden"); // Afficher chargement
+
+  // Charger l'URL
+  serviceFrame.src = url;
 }
 
-// Function to navigate to a custom URL
-function goToCustomUrl() {
-  const input = document.getElementById("custom-url")
-  let url = input.value.trim()
-
-  if (!url) return
-
-  // Add protocol if missing
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    url = "https://" + url
-  }
-
-  currentService = "custom"
-  currentUrl = url
-
-  showApp(url)
-}
-
-// Function to toggle visibility of the custom URL input
-function toggleCustomUrl() {
-  const container = document.getElementById("custom-url-container")
-  const toggleBtn = document.querySelector(".toggle-custom")
-
-  container.classList.toggle("hidden")
-  toggleBtn.classList.toggle("active")
-}
-
-// Function to display the app and load the given URL
-function showApp(url) {
-  welcomeScreen.classList.add("hidden")
-  appContainer.classList.remove("hidden")
-  loadingOverlay.classList.remove("hidden")
-
-  serviceFrame.src = url
-
-  // Add to history
-  history.push(url)
-  historyIndex = history.length - 1
-
-  // Fallback: If iframe doesn't load after 3 seconds, offer to open in new tab
-  setTimeout(() => {
-    if (!loadingOverlay.classList.contains("hidden")) {
-      loadingOverlay.innerHTML = `
-        <div class="spinner"></div>
-        <p>Le site ne peut pas être intégré ici</p>
-        <button onclick="openInNewTab('${url}')" style="
-          margin-top: 20px;
-          padding: 12px 24px;
-          background: #6c7ce7;
-          border: none;
-          border-radius: 10px;
-          color: white;
-          font-size: 14px;
-          cursor: pointer;
-        ">Ouvrir dans un nouvel onglet</button>
-        <button onclick="showWelcome()" style="
-          margin-top: 10px;
-          padding: 12px 24px;
-          background: transparent;
-          border: 1px solid #444;
-          border-radius: 10px;
-          color: #888;
-          font-size: 14px;
-          cursor: pointer;
-        ">Retour</button>
-      `
-    }
-  }, 3000)
-}
-
-// Function to open a URL in a new tab
-function openInNewTab(url) {
-  window.open(url || currentUrl, "_blank")
-}
-
-// Function to display the welcome screen
+// Revenir à l'écran d'accueil
 function showWelcome() {
-  appContainer.classList.add("hidden")
-  welcomeScreen.classList.remove("hidden")
-  closeMenu()
-  serviceFrame.src = ""
-  currentService = null
-  currentUrl = null
+  // Cacher l'app
+  appContainer.classList.add("hidden");
+  welcomeScreen.classList.remove("hidden");
+  
+  // Reset Iframe
+  serviceFrame.src = "about:blank";
+  
+  // Oublier le dernier service pour rester sur l'accueil au prochain lancement
+  localStorage.removeItem("streamix-last-service");
 }
 
-// Function to toggle the menu visibility
-function toggleMenu() {
-  if (menuOpen) {
-    closeMenu()
-  } else {
-    openMenu()
-  }
-}
-
-// Function to open the menu
-function openMenu() {
-  f1Menu.classList.remove("hidden")
-  menuOpen = true
-}
-
-// Function to close the menu
-function closeMenu() {
-  f1Menu.classList.add("hidden")
-  menuOpen = false
-}
-
-// Function to navigate to the home page of the current service
-function goHome() {
-  if (currentService && services[currentService]) {
-    serviceFrame.src = services[currentService].url
-    loadingOverlay.classList.remove("hidden")
-  }
-  closeMenu()
-}
-
-// Function to refresh the current page
-function refresh() {
-  loadingOverlay.classList.remove("hidden")
-  serviceFrame.src = serviceFrame.src
-  closeMenu()
-}
-
-// Function to navigate back in history
-function goBack() {
-  if (historyIndex > 0) {
-    historyIndex--
-    serviceFrame.src = history[historyIndex]
-    loadingOverlay.classList.remove("hidden")
-  }
-  closeMenu()
-}
-
-// Function to navigate forward in history
-function goForward() {
-  if (historyIndex < history.length - 1) {
-    historyIndex++
-    serviceFrame.src = history[historyIndex]
-    loadingOverlay.classList.remove("hidden")
-  }
-  closeMenu()
-}
-
-// Function to open the settings modal
-function openSettings() {
-  settingsModal.classList.remove("hidden")
-  closeMenu()
-}
-
-// Function to close the settings modal
-function closeSettings() {
-  settingsModal.classList.add("hidden")
-}
-
-// Function to change the language setting (utilise le bridge)
-function changeLanguage() {
-  const lang = document.getElementById("language-select").value
-  StorageBridge.set("language", lang)
-  applyLanguage(lang)
-}
-
-// Function to change the theme setting (utilise le bridge)
-function changeTheme() {
-  const theme = document.getElementById("theme-select").value
-  StorageBridge.set("theme", theme)
-  applyTheme(theme)
-}
-
-// Function to apply the selected theme
-function applyTheme(theme) {
-  document.body.setAttribute("data-theme", theme)
-}
-
-// Function to apply the selected language
-function applyLanguage(lang) {
-  const t = locales[lang] || locales.fr
-
-  // Update UI text
-  document.querySelector(".container h1").textContent = t.welcome
-  document.querySelector(".container > p").textContent = t.chooseService
-
-  // Update menu items
-  const menuItems = document.querySelectorAll(".menu-item")
-  const menuTexts = [t.home, t.refresh, t.previous, t.next, t.settings, t.changeService]
-  const menuIcons = ["🏠", "🔄", "⬅️", "➡️", "⚙️", "🔙"]
-
-  let textIndex = 0
-  menuItems.forEach((item) => {
-    if (!item.classList.contains("menu-separator")) {
-      item.innerHTML = `<span>${menuIcons[textIndex]}</span> ${menuTexts[textIndex]}`
-      textIndex++
-    }
-  })
-
-  // Update settings
-  document.querySelector(".settings-header h2").textContent = "⚙️ " + t.settingsTitle
-  document.querySelector(".settings-footer .version").textContent = t.version
-  document.querySelector(".settings-footer .credits").textContent = t.credits
-  document.querySelector(".settings-footer .disclaimer").textContent = t.disclaimer
-
-  // Update loading text
-  const loadingText = document.querySelector(".loading-overlay p")
-  if (loadingText) loadingText.textContent = t.loading
-}
-
-// Function to reset all settings (utilise le bridge)
-function resetSettings() {
-  if (confirm("Voulez-vous vraiment réinitialiser tous les paramètres ?")) {
-    StorageBridge.reset()
-    location.reload()
-  }
-}
-
-// Event listener to save default service when changed (utilise le bridge)
-document.getElementById("default-service")?.addEventListener("change", (e) => {
-  StorageBridge.set("default-service", e.target.value)
-})
-
-// Expose functions globally for onclick handlers
-window.selectService = selectService
-window.toggleCustomUrl = toggleCustomUrl
-window.goToCustomUrl = goToCustomUrl
-window.showWelcome = showWelcome
-window.goHome = goHome
-window.refresh = refresh
-window.goBack = goBack
-window.goForward = goForward
-window.openSettings = openSettings
-window.closeSettings = closeSettings
-window.changeLanguage = changeLanguage
-window.changeTheme = changeTheme
-window.resetSettings = resetSettings
-window.openInNewTab = openInNewTab
+// Exposer les fonctions au HTML
+window.selectService = selectService;
+window.showWelcome = showWelcome;
