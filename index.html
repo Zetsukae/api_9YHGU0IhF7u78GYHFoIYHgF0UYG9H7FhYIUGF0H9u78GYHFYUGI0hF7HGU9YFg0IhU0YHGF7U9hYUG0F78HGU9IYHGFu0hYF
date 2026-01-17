@@ -3,123 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Streamix Web</title>
+  <title>Streamix Source</title>
+  
+  <script src="security.js"></script>
+
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="https://i.imgur.com/lv3zp1J.png" type="image/png">
 </head>
 <body>
-  <!-- Welcome Screen -->
+
   <div id="welcome-screen" class="welcome-screen">
     <div class="wave wave1"></div>
     <div class="wave wave2"></div>
     <div class="wave wave3"></div>
+
     <div class="container">
-      <img src="https://i.imgur.com/lv3zp1J.png" alt="Streamix Logo" class="logo">
-      <h1>Bienvenue sur Streamix</h1>
-      <p>Choisissez votre service de streaming préféré</p>
+      <h1>Streamix</h1>
+      <p>Sélectionnez une plateforme</p>
       
       <button class="service-button" onclick="selectService('franime')">
-        <span class="service-icon"></span>
         Franime
       </button>
       
       <button class="service-button" onclick="selectService('animesama')">
-        <span class="service-icon"></span>
         Anime Sama
       </button>
       
       <button class="service-button" onclick="selectService('voiranime')">
-        <span class="service-icon"></span>
         Voiranime
       </button>
-      </div>
     </div>
   </div>
 
-  <!-- Main App (iframe container) -->
   <div id="app-container" class="app-container hidden">
-    <!-- F1 Menu -->
-    <div id="f1-menu" class="f1-menu hidden">
-      <div class="menu-item" onclick="goHome()">
-        <span>🏠</span> Accueil du service
-      </div>
-      <div class="menu-item" onclick="refresh()">
-        <span>🔄</span> Actualiser
-      </div>
-      <div class="menu-item" onclick="goBack()">
-        <span>⬅️</span> Précédent
-      </div>
-      <div class="menu-item" onclick="goForward()">
-        <span>➡️</span> Suivant
-      </div>
-      <div class="menu-separator"></div>
-      <div class="menu-item" onclick="openSettings()">
-        <span>⚙️</span> Paramètres
-      </div>
-      <div class="menu-separator"></div>
-      <div class="menu-item" onclick="showWelcome()">
-        <span>🔙</span> Changer de service
-      </div>
-    </div>
+    <button id="back-home-btn" onclick="showWelcome()" title="Changer de service">
+      ↩
+    </button>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="settings-modal hidden">
-      <div class="settings-content">
-        <div class="settings-header">
-          <h2>⚙️ Paramètres Streamix</h2>
-          <button class="close-settings" onclick="closeSettings()">×</button>
-        </div>
-        <div class="settings-body">
-          <div class="setting-group">
-            <label>🌐 Langue</label>
-            <select id="language-select" onchange="changeLanguage()">
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="de">Deutsch</option>
-              <option value="it">Italiano</option>
-              <option value="pt">Português</option>
-              <option value="ja">日本語</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <label>🎨 Thème</label>
-            <select id="theme-select" onchange="changeTheme()">
-              <option value="dark">Sombre</option>
-              <option value="light">Clair</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <label>📍 Service par défaut</label>
-            <select id="default-service">
-              <option value="">Toujours demander</option>
-              <option value="franime">Franime</option>
-              <option value="animesama">Anime Sama</option>
-              <option value="voiranime">Voiranime</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <button class="reset-btn" onclick="resetSettings()">
-              🔄 Réinitialiser les paramètres
-            </button>
-          </div>
-        </div>
-        <div class="settings-footer">
-          <p class="version">Streamix Web v1.0.0</p>
-          <p class="credits">Fait avec ❤ par Uniware Team</p>
-          <p class="disclaimer">Nous ne possédons pas les droits des contenus affichés.</p>
-        </div>
-      </div>
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
     </div>
-
-    <!-- Service Frame Container -->
-    <div id="frame-container" class="frame-container">
-      <div class="loading-overlay" id="loading">
-        <div class="spinner"></div>
-        <p>Chargement...</p>
-      </div>
-      <iframe id="service-frame" src="/placeholder.svg" frameborder="0" allowfullscreen></iframe>
-    </div>
+    
+    <iframe id="service-frame" src="about:blank" frameborder="0" allowfullscreen></iframe>
   </div>
 
   <script src="app.js"></script>
