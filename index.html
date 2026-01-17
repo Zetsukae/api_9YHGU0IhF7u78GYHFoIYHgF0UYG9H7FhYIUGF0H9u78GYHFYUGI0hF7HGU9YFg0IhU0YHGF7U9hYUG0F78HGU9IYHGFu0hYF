@@ -3,12 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Streamix Web</title>
+  <title>VF/VOSTFR Streamix Sources, Non-official.</title>
+  
+  <script>
+    (function() {
+      // La "Key" zetsukaedagoat est envoyée dans les headers par l'app.
+      // Pour une source statique (client-side), on vérifie la signature User-Agent
+      // qui accompagne toujours la clé dans l'application Streamix.
+      const isStreamix = navigator.userAgent.includes('StreamixApp');
+      
+      // Si ce n'est pas Streamix, on détruit la page immédiatement
+      if (!isStreamix) {
+        document.documentElement.innerHTML = `
+          <style>
+            body { background: #0a0a0a; color: #dc2626; font-family: -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; margin: 0; }
+            h1 { font-size: 24px; margin-bottom: 12px; }
+            p { color: #888; max-width: 400px; line-height: 1.5; }
+            .lock { font-size: 64px; margin-bottom: 24px; }
+          </style>
+          <body>
+            <div class="lock">🔒</div>
+            <h1>Source Protégée</h1>
+            <p>L'accès à cette source est restreint (Clé invalide).</p>
+            <p style="font-size: 12px; margin-top: 20px;">Veuillez l'ouvrir via l'application <strong>Streamix</strong>.</p>
+          </body>
+        `;
+        // On stoppe l'exécution de tout le reste
+        throw new Error("Streamix Security: Invalid Key/Agent");
+      }
+    })();
+  </script>
+
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="https://i.imgur.com/lv3zp1J.png" type="image/png">
 </head>
 <body>
-  <!-- Welcome Screen -->
   <div id="welcome-screen" class="welcome-screen">
     <div class="wave wave1"></div>
     <div class="wave wave2"></div>
@@ -36,9 +65,7 @@
     </div>
   </div>
 
-  <!-- Main App (iframe container) -->
   <div id="app-container" class="app-container hidden">
-    <!-- F1 Menu -->
     <div id="f1-menu" class="f1-menu hidden">
       <div class="menu-item" onclick="goHome()">
         <span>🏠</span> Accueil du service
@@ -62,7 +89,6 @@
       </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settings-modal" class="settings-modal hidden">
       <div class="settings-content">
         <div class="settings-header">
@@ -112,7 +138,6 @@
       </div>
     </div>
 
-    <!-- Service Frame Container -->
     <div id="frame-container" class="frame-container">
       <div class="loading-overlay" id="loading">
         <div class="spinner"></div>
