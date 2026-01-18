@@ -20,7 +20,7 @@ const StorageBridge = {
 // URLs des services
 const services = {
   franime: "https://franime.fr/",
-  animesama: "https://anime-sama.pw/",
+  animesama: "https://anime-sama.tv/",
   voiranime: "https://v6.voiranime.com/"
 };
 
